@@ -1,0 +1,353 @@
+---
+title: "Class 1 Assignment"
+author: "Yosef Chernet"
+date: "2025-09-16"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(dplyr)
+install.packages(MASS)
+```
+
+1, Importing Data
+
+2, Obtaining a, Number of number of observation b, Number of variables in the data frame.
+
+```{r}
+# Importing Data
+Class1Survey <-
+  read_csv(
+    "https://github.com/kijohnson/Advanced-Data-Analysis/raw/refs/heads/main/Class%201%20Survey%20Fall%202025%202.csv"
+  )
+
+# Showing number of Observations and Variables
+dim(Class1Survy)
+
+
+```
+3, Renaming Variables
+```{r}
+# Renaming Variables of interest
+Class1Survy <- Class1Survey %>%
+  rename_with(
+    ~ c("id","like_cats","like_dogs","have_desert","slogan","fav_day",
+        "larkORowl","fav_food","fav_drink","fav_season","fav_month",
+        "hobby","program","specialization","stat_software","R_exp",
+        "coding_comfort","coding_length","top_three","public_health_interest",
+        "fav_num","bday","bmonth","country","state","city","highest_educ_level"),
+    .cols = 1:27
+  )
+
+```
+4, Determine and display the number of factor, integer, numerical, and character variables
+```{r}
+sapply(Class1Survey, class)
+```
+
+
+5)  a, Check bday and bmonth variables for unusual or missing values
+
+```{r}
+
+
+# Check bday variable (birth day)
+cat("Birth Day (bday) values:\n")
+table(Class1Survy$bday, useNA = "ifany")
+cat("\n")
+
+# Check bmonth variable (birth month) 
+cat("Birth Month (bmonth) values:\n")
+table(Class1Survy$bmonth, useNA = "ifany")
+cat("\n")
+
+# Additional checks for unusual values
+cat("Summary of bday:\n")
+summary(Class1Survy$bday)
+cat("\n")
+
+cat("Summary of bmonth:\n")
+summary(Class1Survy$bmonth)
+cat("\n")
+
+# Show unique values to spot unusual entries
+cat("Unique birth day values:\n")
+print(sort(unique(Class1Survy$bday)))
+cat("\n")
+
+cat("Unique birth month values:\n")
+print(sort(unique(Class1Survy$bmonth)))
+cat("\n")
+
+# Check for potentially problematic entries (non-numeric characters)
+cat("Birth days that contain non-digit characters:\n")
+non_numeric_bday <- Class1Survy$bday[!is.na(Class1Survy$bday) & !grepl("^[0-9]+$", Class1Survy$bday)]
+if(length(non_numeric_bday) > 0) {
+  print(non_numeric_bday)
+} else {
+  cat("All birth day entries appear to be numeric\n")
+}
+
+cat("\nBirth months that contain non-digit characters:\n")
+non_numeric_bmonth <- Class1Survy$bmonth[!is.na(Class1Survy$bmonth) & !grepl("^[0-9]+$", Class1Survy$bmonth)]
+if(length(non_numeric_bmonth) > 0) {
+  print(non_numeric_bmonth)
+} else {
+  cat("All birth month entries appear to be numeric\n")
+}
+```
+
+b, .Cleaning and Correcting Data 
+```{r}
+
+# Clean bday and bmonth variables
+library(dplyr)
+library(stringr)
+
+# Clean the bday variable
+Class1Survy <- Class1Survy %>%
+  mutate(
+    bday_clean = case_when(
+      # Extract day from full dates
+      bday == "August 2nd 1997" ~ "2",
+      bday == "June 2nd" ~ "2",
+      bday == "15-Nov" ~ "15",
+      bday == "24-Jun" ~ "24",
+      # Keep regular numeric days as is
+      str_detect(bday, "^[0-9]+$") ~ bday,
+      # Handle any other cases
+      TRUE ~ bday
+    ),
+    # Convert to numeric
+    bday_clean = as.numeric(bday_clean)
+  )
+
+# Clean the bmonth variable
+Class1Survy <- Class1Survy %>%
+  mutate(
+    bmonth_clean = case_when(
+      # Convert month names to numbers
+      str_to_lower(bmonth) == "january" ~ 1,
+      str_to_lower(bmonth) == "february" ~ 2,
+      str_to_lower(bmonth) == "march" ~ 3,
+      str_to_lower(bmonth) == "april" ~ 4,
+      str_to_lower(bmonth) == "may" ~ 5,
+      str_to_lower(bmonth) == "june" ~ 6,
+      str_to_lower(bmonth) == "july" ~ 7,
+      str_to_lower(bmonth) == "august" ~ 8,
+      str_to_lower(bmonth) == "september" ~ 9,
+      str_to_lower(bmonth) == "septemeber" ~ 9,  # Fix misspelling
+      str_to_lower(bmonth) == "october" ~ 10,
+      str_to_lower(bmonth) == "november" ~ 11,
+      str_to_lower(bmonth) == "december" ~ 12,
+      # Keep numeric months as is
+      str_detect(bmonth, "^[0-9]+$") ~ as.numeric(bmonth),
+      # Handle any other cases
+      TRUE ~ as.numeric(bmonth)
+    )
+  )
+
+# Check the cleaning results
+cat("Cleaned Birth Day (bday_clean) values:\n")
+table(Class1Survy$bday_clean, useNA = "ifany")
+cat("\n")
+
+cat("Cleaned Birth Month (bmonth_clean) values:\n")
+table(Class1Survy$bmonth_clean, useNA = "ifany")
+cat("\n")
+
+# Verify no unusual values remain
+cat("Range check for cleaned birth days (should be 1-31):\n")
+cat("Min:", min(Class1Survy$bday_clean, na.rm = TRUE), "\n")
+cat("Max:", max(Class1Survy$bday_clean, na.rm = TRUE), "\n")
+
+cat("\nRange check for cleaned birth months (should be 1-12):\n")
+cat("Min:", min(Class1Survy$bmonth_clean, na.rm = TRUE), "\n")
+cat("Max:", max(Class1Survy$bmonth_clean, na.rm = TRUE), "\n")
+
+# Show any remaining issues
+invalid_days <- Class1Survy$bday_clean[!is.na(Class1Survy$bday_clean) & (Class1Survy$bday_clean < 1 | Class1Survy$bday_clean > 31)]
+if(length(invalid_days) > 0) {
+  cat("\nInvalid birth days found:", invalid_days, "\n")
+} else {
+  cat("\nAll birth days are within valid range (1-31)\n")
+}
+
+invalid_months <- Class1Survy$bmonth_clean[!is.na(Class1Survy$bmonth_clean) & (Class1Survy$bmonth_clean < 1 | Class1Survy$bmonth_clean > 12)]
+if(length(invalid_months) > 0) {
+  cat("Invalid birth months found:", invalid_months, "\n")
+} else {
+  cat("All birth months are within valid range (1-12)\n")
+}
+```
+c, Data Analysis
+```{r}
+# Find median birth day and birth month after cleaning
+
+# Check that variables are numeric
+cat("Data types of cleaned variables:\n")
+cat("bday_clean:", class(Class1Survy$bday_clean), "\n")
+cat("bmonth_clean:", class(Class1Survy$bmonth_clean), "\n\n")
+
+# Calculate median birth day
+median_bday <- median(Class1Survy$bday_clean, na.rm = TRUE)
+cat("Median birth day:", median_bday, "\n")
+
+# Calculate median birth month
+median_bmonth <- median(Class1Survy$bmonth_clean, na.rm = TRUE)
+cat("Median birth month:", median_bmonth, "\n\n")
+
+# Additional summary statistics
+cat("Summary statistics for birth day:\n")
+summary(Class1Survy$bday_clean)
+cat("\n")
+
+cat("Summary statistics for birth month:\n")
+summary(Class1Survy$bmonth_clean)
+cat("\n")
+
+# Convert median month back to month name for interpretation
+month_names <- c("January", "February", "March", "April", "May", "June",
+                 "July", "August", "September", "October", "November", "December")
+
+cat("Interpretation:\n")
+cat("Median birth day:", median_bday, "(day of the month)\n")
+cat("Median birth month:", median_bmonth, "(", month_names[median_bmonth], ")\n")
+```
+6) Create bseason, cross-check with bmonth, and sum columns
+```{r}
+# Create bseason variable based on Northern Meteorological seasons
+library(dplyr)
+
+# a. Create bseason variable
+Class1Survy <- Class1Survy %>%
+  mutate(
+    bseason = case_when(
+      # Winter: December (12), January (1), February (2)
+      bmonth_clean %in% c(12, 1, 2) ~ "Winter",
+      # Spring: March (3), April (4), May (5) 
+      bmonth_clean %in% c(3, 4, 5) ~ "Spring",
+      # Summer: June (6), July (7), August (8)
+      bmonth_clean %in% c(6, 7, 8) ~ "Summer",
+      # Fall: September (9), October (10), November (11)
+      bmonth_clean %in% c(9, 10, 11) ~ "Fall",
+      # Handle missing birth month
+      is.na(bmonth_clean) ~ NA_character_,
+      # Catch any unexpected values
+      TRUE ~ "Unknown"
+    )
+  )
+
+# b. Create table with bmonths in rows and seasons in columns to verify coding
+cat("b. Verification table - Birth months (rows) by Seasons (columns):\n")
+verification_table <- table(Class1Survy$bmonth_clean, Class1Survy$bseason, useNA = "ifany")
+print(verification_table)
+cat("\n")
+
+# c. Use addmargins to sum columns and count classmates born in each season
+cat("c. Number of classmates born in each season:\n")
+season_summary <- addmargins(verification_table, margin = 1)
+print(season_summary)
+cat("\n")
+
+# Extract just the column totals for a cleaner answer
+column_totals <- season_summary[nrow(season_summary), ]
+cat("Answer: Number of classmates born in each season:\n")
+for(i in 1:length(column_totals)) {
+  col_name <- names(column_totals)[i]
+  if(!is.na(col_name) && col_name != "Sum") {
+    cat(col_name, ":", column_totals[i], "classmates\n")
+  }
+}
+
+# Calculate total excluding NA and Sum columns
+valid_seasons <- column_totals[!is.na(names(column_totals)) & names(column_totals) != "Sum" & names(column_totals) != "<NA>"]
+cat("Total with known birth months:", sum(valid_seasons), "classmates\n")
+
+# Additional verification - simple season count
+cat("\nSimple season distribution:\n")
+table(Class1Survy$bseason, useNA = "ifany")
+```
+7, Analaysis of Star Signs
+```{r}
+# Create star sign variable based on birth month and day
+library(dplyr)
+
+Class1Survy <- Class1Survy %>%
+  mutate(
+    star_sign = case_when(
+      # Aries: March 21 - April 19
+      (bmonth_clean == 3 & bday_clean >= 21) | (bmonth_clean == 4 & bday_clean <= 19) ~ "Aries",
+      
+      # Taurus: April 20 - May 20
+      (bmonth_clean == 4 & bday_clean >= 20) | (bmonth_clean == 5 & bday_clean <= 20) ~ "Taurus",
+      
+      # Gemini: May 21 - June 20
+      (bmonth_clean == 5 & bday_clean >= 21) | (bmonth_clean == 6 & bday_clean <= 20) ~ "Gemini",
+      
+      # Cancer: June 21 - July 22
+      (bmonth_clean == 6 & bday_clean >= 21) | (bmonth_clean == 7 & bday_clean <= 22) ~ "Cancer",
+      
+      # Leo: July 23 - August 22
+      (bmonth_clean == 7 & bday_clean >= 23) | (bmonth_clean == 8 & bday_clean <= 22) ~ "Leo",
+      
+      # Virgo: August 23 - September 22
+      (bmonth_clean == 8 & bday_clean >= 23) | (bmonth_clean == 9 & bday_clean <= 22) ~ "Virgo",
+      
+      # Libra: September 23 - October 22
+      (bmonth_clean == 9 & bday_clean >= 23) | (bmonth_clean == 10 & bday_clean <= 22) ~ "Libra",
+      
+      # Scorpio: October 23 - November 21
+      (bmonth_clean == 10 & bday_clean >= 23) | (bmonth_clean == 11 & bday_clean <= 21) ~ "Scorpio",
+      
+      # Sagittarius: November 22 - December 21
+      (bmonth_clean == 11 & bday_clean >= 22) | (bmonth_clean == 12 & bday_clean <= 21) ~ "Sagittarius",
+      
+      # Capricorn: December 22 - January 19
+      (bmonth_clean == 12 & bday_clean >= 22) | (bmonth_clean == 1 & bday_clean <= 19) ~ "Capricorn",
+      
+      # Aquarius: January 20 - February 18
+      (bmonth_clean == 1 & bday_clean >= 20) | (bmonth_clean == 2 & bday_clean <= 18) ~ "Aquarius",
+      
+      # Pisces: February 19 - March 20
+      (bmonth_clean == 2 & bday_clean >= 19) | (bmonth_clean == 3 & bday_clean <= 20) ~ "Pisces",
+      
+      # Handle missing data
+      is.na(bmonth_clean) | is.na(bday_clean) ~ NA_character_,
+      
+      # Catch any unexpected cases
+      TRUE ~ "Unknown"
+    )
+  )
+
+# Display star sign distribution
+cat("Star Sign Distribution in Class:\n")
+table(Class1Survy$star_sign, useNA = "ifany")
+cat("\n")
+
+# Show individual results (birth date and star sign)
+cat("Individual Birth Dates and Star Signs:\n")
+birth_sign_summary <- Class1Survy[!is.na(Class1Survy$bmonth_clean) & !is.na(Class1Survy$bday_clean), 
+                                  c("id", "bmonth_clean", "bday_clean", "star_sign")]
+birth_sign_summary <- birth_sign_summary[order(birth_sign_summary$bmonth_clean, birth_sign_summary$bday_clean), ]
+
+print(birth_sign_summary)
+cat("\n")
+
+# Count by star sign
+cat("Number of students per star sign:\n")
+star_counts <- table(Class1Survy$star_sign, useNA = "ifany")
+for(sign in names(star_counts)) {
+  if(!is.na(sign)) {
+    cat(sign, ":", star_counts[sign], "students\n")
+  }
+}
+
+# Show any missing data
+missing_count <- sum(is.na(Class1Survy$star_sign))
+if(missing_count > 0) {
+  cat("Missing star sign data:", missing_count, "students\n")
+}
+```
